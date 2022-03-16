@@ -1,0 +1,11 @@
+###
+ # @Author: your name
+ # @Date: 2021-07-04 22:22:50
+ # @LastEditTime: 2021-07-04 22:33:46
+ # @LastEditors: Please set LastEditors
+ # @Description: In User Settings Edit
+ # @FilePath: \sd_relocate\write2sd
+### 
+#!/bin/sh
+sudo dd iflag=dsync oflag=dsync if=./BL1/BL1.bin of=/dev/sdc seek=1
+sudo dd iflag=dsync oflag=dsync if=./BL2/lcd.bin of=/dev/sdc seek=45

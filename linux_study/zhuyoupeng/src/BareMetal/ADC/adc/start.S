@@ -1,0 +1,63 @@
+/**
+*	文件名：start.S
+*	作者：Master_r
+*	描述：汇编代码点亮led
+*/
+
+
+// watchdog register
+#define WTCON 0xE2700000
+
+// stack
+#define SVC_STACK	0xD0037D80
+#define IRQ_STACK	0xd0037f80
+
+.global _start					// 把 _start 的连接属性改为外部，这样其他文件就可以看见 _start了
+_start:
+	// 关看门狗
+	ldr r0, =0x0 
+	ldr r1, =WTCON
+	str r0, [r1]
+
+	// 设置栈
+	ldr sp, =SVC_STACK
+	
+	// 供电锁存
+	ldr	r0, =0xE010E81C  /* PS_HOLD_CONTROL register */
+	ldr	r1, =0x00005301	 /* PS_HOLD output high	*/
+	str	r1, [r0]
+
+	// 开/关iCache
+	mrc p15, 0, r0, c1, c0,0;		// 取出cp15的c1到r0中
+	//bic r0, r0, #(1<<12)			// bit12 置0 关icache
+	orr r0, r0, #(1<<12)			// bit12 置1 开icache
+	mcr p15, 0, r0, c1, c0,0;
+
+	// 这里可以使用C程序， bl调用c程序
+	
+	//bl led_blink
+	bl main
+	
+	// 汇编这个死循环不能丢
+	b .
+
+
+// 在这个汇编函数中，用来做中断现场保存,arm 中比较模式化。
+// 流程：设置栈 --> 保存lr（pc - 4）
+.global IRQ_handle
+IRQ_handle:
+	// 设置irq模式下的栈
+	ldr sp,	=IRQ_STACK
+
+	// 保存lr
+	// 因为ARM有流水线，所以PC的值会比真正的执行的代码+8
+	sub lr,	lr,	#4
+
+	// 保存r0-r12和lr到irq模式下的栈
+	stmfd sp!, {r0-r12, lr}
+
+	//再次调用真正的isr来处理中断
+	bl irq_handler
+
+	// 处理完成开始恢复现场，其实就是做中断返回，关键是r0-r12，pc，cpsr一起恢复
+	ldmfd sp!, {r0-r12, pc}^
